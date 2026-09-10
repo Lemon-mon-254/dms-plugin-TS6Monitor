@@ -3,7 +3,7 @@
     "id": "ts6status",
     "name": "TS6 Monitor",
     "description": "Monitor TeamSpeak 6 client activity: mic/mute state, current server/channel, channel members with avatars, speakers, and volume control via the Remote Apps API.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "author": "lemonmon",
     "icon": "record_voice_over",
     "type": "widget",
@@ -14,6 +14,7 @@
     "permissions": [
         "settings_read",
         "settings_write",
-        "network"
+        "network",
+        "process"
     ]
 }

@@ -33,6 +33,7 @@ PluginComponent {
     property bool showServerName: pluginData.showServerName === true
     property bool showCurrentChannel: pluginData.showCurrentChannel === true
     property bool showChannelCount: pluginData.showChannelCount === true
+    property bool debugLog: pluginData.debugLog === true
 
     // Slightly larger avatar shown on the capsules, plus a speaking ring.
     readonly property real pillAvatarSize: 30
@@ -91,6 +92,7 @@ PluginComponent {
     // ----- Forward settings into the service -----
     Binding { target: ts6Service; property: "serverHost"; value: root.hostSetting }
     Binding { target: ts6Service; property: "serverPort"; value: root.portSetting }
+    Binding { target: ts6Service; property: "debugLog"; value: root.debugLog }
 
     // The mic / mute / volume functions work by sending discrete virtual key
     // presses that you bind in TeamSpeak -> Settings -> Key Bindings to the

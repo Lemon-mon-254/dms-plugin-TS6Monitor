@@ -37,7 +37,9 @@ PluginSettings {
         "showCurrentChannelLabel": "显示当前频道",
         "showCurrentChannelDesc": "在面板中显示当前频道名称",
         "showChannelCountLabel": "显示频道人数",
-        "showChannelCountDesc": "在面板中显示频道成员人数"
+        "showChannelCountDesc": "在面板中显示频道成员人数",
+        "debugLogLabel": "调试日志",
+        "debugLogDesc": "将诊断信息写入插件目录下的 debug.log（默认关闭）"
     })
     readonly property var _en: ({
         "settingsTitle": "TS6 Monitor Settings",
@@ -68,7 +70,9 @@ PluginSettings {
         "showCurrentChannelLabel": "Show current channel",
         "showCurrentChannelDesc": "Show the current channel name in the panel",
         "showChannelCountLabel": "Show member count",
-        "showChannelCountDesc": "Show the channel member count in the panel"
+        "showChannelCountDesc": "Show the channel member count in the panel",
+        "debugLogLabel": "Debug log",
+        "debugLogDesc": "Write diagnostics to debug.log in the plugin directory (off by default)"
     })
     readonly property var _dict: root._lang === "en" ? root._en : root._zh
     function t(key) { return root._dict[key] !== undefined ? root._dict[key] : key }
@@ -206,6 +210,13 @@ PluginSettings {
         settingKey: "showChannelCount"
         label: root.t("showChannelCountLabel")
         description: root.t("showChannelCountDesc")
+        defaultValue: false
+    }
+
+    ToggleSetting {
+        settingKey: "debugLog"
+        label: root.t("debugLogLabel")
+        description: root.t("debugLogDesc")
         defaultValue: false
     }
 }

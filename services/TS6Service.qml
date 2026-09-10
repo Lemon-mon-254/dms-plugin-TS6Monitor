@@ -5,16 +5,23 @@ import QtQuick
 import QtWebSockets
 import Quickshell
 import Quickshell.Io
+import qs.Common
 
 Singleton {
     id: root
 
-    // Reliable absolute paths for our own persistence (FileView writes proved
-    // unreliable in the plugin sub-instance, so we shell out via Process).
-    readonly property string apiKeyPath: "/home/lemonmon/.config/DankMaterialShell/plugins/TS6Status/apiKey.txt"
-    readonly property string debugPath: "/home/lemonmon/.config/DankMaterialShell/plugins/TS6Status/debug.log"
-    readonly property string avatarCachePath: "/home/lemonmon/.config/DankMaterialShell/plugins/TS6Status/avatarCache.json"
-    readonly property string avatarLocalDir: "/home/lemonmon/.cache/ts6avatar"
+    // Runtime paths, resolved from the user's real config/cache locations so
+    // the plugin works for any user (FileView writes proved unreliable in the
+    // plugin sub-instance, so we shell out via Process).
+    readonly property string _home: Paths.strip(Paths.home)
+    readonly property string _base: Paths.strip(Paths.config) + "/plugins/TS6Status"
+    readonly property string apiKeyPath: root._base + "/apiKey.txt"
+    readonly property string debugPath: root._base + "/debug.log"
+    readonly property string avatarCachePath: root._base + "/avatarCache.json"
+    readonly property string avatarLocalDir: root._home + "/.cache/ts6avatar"
+
+    // File mirror for the debug ring below; enable in the plugin settings.
+    property bool debugLog: false
 
     // Persistent cache of long-lived/nearly-invariant per-user data, keyed by the
     // member's stable databaseId (legacyUUID is only exposed for self/connection
@@ -317,6 +324,7 @@ Singleton {
 
     function debugLog(msg) {
         console.log("[TS6Service] " + msg);
+        if (!root.debugLog) return;
         const line = new Date().toTimeString().slice(0, 8) + "  " + msg;
         _dbgLines.push(line);
         if (_dbgLines.length > 200) _dbgLines = _dbgLines.slice(-200);

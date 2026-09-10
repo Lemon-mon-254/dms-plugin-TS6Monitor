@@ -84,6 +84,12 @@ The virtual key identifiers default to `dms.ts6.mic`, `dms.ts6.mute`, `dms.ts6.l
 - Built and tested on DMS 1.x with niri (Wayland), PulseAudio/PipeWire.
 - If your bar is vertical, use the vertical pill variant.
 
+## Security notes
+
+- The plugin talks to the TeamSpeak Remote Apps API over a WebSocket bound to the loopback address `ws://127.0.0.1:5899` by default (plaintext, local machine only).
+- Do not change the host to a remote address or expose the Remote Apps port through your firewall to untrusted networks.
+- The authorized key stored in `apiKey.txt` lives only in your plugin directory (excluded via `.gitignore`); never commit or share it.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
