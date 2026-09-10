@@ -1,6 +1,6 @@
 {
     "$schema": "https://danklinux.com/schemas/plugin.json",
-    "id": "ts6status",
+    "id": "tsMonitor",
     "name": "TS6 Monitor",
     "description": "Monitor TeamSpeak 6 client activity: mic/mute state, current server/channel, channel members with avatars, speakers, and volume control via the Remote Apps API.",
     "version": "0.3.0",

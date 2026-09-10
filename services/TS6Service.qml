@@ -339,7 +339,7 @@ Singleton {
     // Fixed lowercase identifier. The first connection must be approved in
     // TeamSpeak (Settings -> Remote Apps), after which the client returns an
     // apiKey that we persist and reuse.
-    readonly property string appIdentifier: "com.dms.ts6status"
+    readonly property string appIdentifier: "com.dms.tsMonitor"
     readonly property string appName: "TS6 Monitor"
     readonly property string appDescription: "DankMaterialShell TeamSpeak 6 status monitor"
 
