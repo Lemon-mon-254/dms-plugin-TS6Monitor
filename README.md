@@ -2,6 +2,8 @@
 
 > 简体中文 | [English](./README.en.md)
 
+![TS6 Monitor 截图](./screenshots/ts.png)
+
 基于 [TeamSpeak 6](https://www.teamspeak.com/zh-CN/) **Remote Apps API**（WebSocket）的语音状态监控插件，用于 [DankMaterialShell](https://danklinux.com)（DMS）——面向 [niri](https://github.com/YaLTeR/niri)（Wayland）的 Material Design 桌面外壳。插件读取 TS6 客户端状态，实时显示在系统栏的胶囊上，并可直接在胶囊上操作语音开关。
 
 ## 特性

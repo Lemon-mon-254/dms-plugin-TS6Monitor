@@ -2,6 +2,8 @@
 
 > English | [简体中文](./README.md)
 
+![TS6 Monitor screenshot](./screenshots/ts.png)
+
 A **TeamSpeak 6** status monitor widget for [DankMaterialShell](https://danklinux.com) (DMS), the material-design shell for [niri](https://github.com/YaLTeR/niri) (Wayland). It reads your TS6 client state through TS6's official **Remote Apps API** (WebSocket) and shows it right in the bar — plus real interactive controls on the pill.
 
 ## Features
