@@ -1,0 +1,19 @@
+{
+    "$schema": "https://danklinux.com/schemas/plugin.json",
+    "id": "ts6status",
+    "name": "TS6 Monitor",
+    "description": "Monitor TeamSpeak 6 client activity: mic/mute state, current server/channel, channel members with avatars, speakers, and volume control via the Remote Apps API.",
+    "version": "0.2.0",
+    "author": "lemonmon",
+    "icon": "record_voice_over",
+    "type": "widget",
+    "capabilities": ["dankbar-widget", "teamspeak", "voice"],
+    "component": "./TS6StatusWidget.qml",
+    "settings": "./TS6StatusSettings.qml",
+    "requires_dms": ">=1.4.0",
+    "permissions": [
+        "settings_read",
+        "settings_write",
+        "network"
+    ]
+}

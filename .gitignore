@@ -1,0 +1,6 @@
+# Private / runtime data (never commit)
+apiKey.txt
+debug.log
+avatarCache.json
+*.log
+*.bak
