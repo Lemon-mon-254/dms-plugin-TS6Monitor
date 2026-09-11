@@ -12,7 +12,8 @@ import "./components"
 PluginComponent {
     id: root
 
-    // Hide the whole pill via DMS's BasePill hidden state once not in a channel.
+    // Hide the whole pill while not connected / not in a channel (toggleable in settings).
+    property bool hideWhenDisconnected: pluginData.hideWhenDisconnected !== false
     visibilityCommand: "false"
     Connections {
         target: svc
@@ -48,7 +49,7 @@ PluginComponent {
 
     // True when we are connected to a server and are inside a channel. This is
     // what makes the whole pill appear/disappear (empty channel still shows).
-    readonly property bool showWhenConnected: root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0
+    readonly property bool showWhenConnected: !root.hideWhenDisconnected || (root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0)
 
     // ----- Minimal i18n (mirrors the settings page keys) -----
     readonly property string _lang: pluginData.language || "zh"
