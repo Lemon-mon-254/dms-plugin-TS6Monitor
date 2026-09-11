@@ -20,6 +20,19 @@ PluginComponent {
         function onNotifyTickChanged() {
             root.conditionVisible = root.showWhenConnected;
         }
+        function onHasActiveConnectionChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
+        function onSelfChannelIdChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
+    }
+
+    Connections {
+        target: root
+        function onShowWhenConnectedChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
     }
     Component.onCompleted: root.conditionVisible = root.showWhenConnected
 
@@ -55,6 +68,7 @@ PluginComponent {
     readonly property string _lang: pluginData.language || "zh"
     readonly property var _zh: ({
         "refreshCache": "刷新头像和昵称缓存",
+        "forceRefresh": "重新连接并刷新状态",
         "notConnected": "未连接到 TeamSpeak（请确认已安装 TS6 并在 设置 → Remote Apps 中启用）",
         "needAuth": "请在 TeamSpeak → 设置 → Remote Apps → 权限请求 中批准本应用以完成授权",
         "serverLabel": "服务器：",
@@ -69,6 +83,7 @@ PluginComponent {
     })
     readonly property var _en: ({
         "refreshCache": "Refresh avatar & nickname cache",
+        "forceRefresh": "Reconnect and refresh status",
         "notConnected": "Not connected to TeamSpeak (make sure TS6 is installed and Remote Apps is enabled)",
         "needAuth": "Approve this app in TeamSpeak → Settings → Remote Apps → Permission Requests",
         "serverLabel": "Server: ",
@@ -372,7 +387,7 @@ PluginComponent {
                 radius: 16
                 color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
                 ToolTip.visible: hoverArea.containsMouse
-                ToolTip.text: root.t("refreshCache")
+                ToolTip.text: root.t("forceRefresh")
                 DankIcon {
                     anchors.centerIn: parent
                     name: "refresh"
@@ -384,9 +399,10 @@ PluginComponent {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.ts6Service.refreshCache()
-                    }
+onClicked: {
+                                root.ts6Service.forceRefresh();
+                                root.ts6Service.refreshCache();
+                            }
                 }
             }
 
