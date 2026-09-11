@@ -38,8 +38,6 @@ PluginSettings {
         "showCurrentChannelDesc": "在面板中显示当前频道名称",
         "showChannelCountLabel": "显示频道人数",
         "showChannelCountDesc": "在面板中显示频道成员人数",
-        "hideWhenDisconnectedLabel": "未连接时隐藏胶囊",
-        "hideWhenDisconnectedDesc": "未连接或未进入频道时隐藏系统栏上的胶囊（关闭则始终显示）",
         "debugLogLabel": "调试日志",
         "debugLogDesc": "将诊断信息写入插件目录下的 debug.log（默认关闭）"
     })
@@ -73,8 +71,6 @@ PluginSettings {
         "showCurrentChannelDesc": "Show the current channel name in the panel",
         "showChannelCountLabel": "Show member count",
         "showChannelCountDesc": "Show the channel member count in the panel",
-        "hideWhenDisconnectedLabel": "Hide pill when disconnected",
-        "hideWhenDisconnectedDesc": "Hide the bar pill while not connected / not in a channel (off keeps it always visible)",
         "debugLogLabel": "Debug log",
         "debugLogDesc": "Write diagnostics to debug.log in the plugin directory (off by default)"
     })
@@ -214,13 +210,6 @@ PluginSettings {
         settingKey: "showChannelCount"
         label: root.t("showChannelCountLabel")
         description: root.t("showChannelCountDesc")
-        defaultValue: false
-    }
-
-    ToggleSetting {
-        settingKey: "hideWhenDisconnected"
-        label: root.t("hideWhenDisconnectedLabel")
-        description: root.t("hideWhenDisconnectedDesc")
         defaultValue: false
     }
 

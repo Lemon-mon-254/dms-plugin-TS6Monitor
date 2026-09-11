@@ -12,25 +12,11 @@ import "./components"
 PluginComponent {
     id: root
 
-    // Hide the whole pill while not connected / not in a channel (toggleable in settings).
-    property bool hideWhenDisconnected: pluginData.hideWhenDisconnected === true
-    visibilityCommand: root.hideWhenDisconnected ? "false" : ""
+    // Hide the whole pill via DMS's BasePill hidden state once not in a channel.
+    visibilityCommand: "false"
     Connections {
         target: svc
         function onNotifyTickChanged() {
-            root.conditionVisible = root.showWhenConnected;
-        }
-        function onHasActiveConnectionChanged() {
-            root.conditionVisible = root.showWhenConnected;
-        }
-        function onSelfChannelIdChanged() {
-            root.conditionVisible = root.showWhenConnected;
-        }
-    }
-
-    Connections {
-        target: root
-        function onShowWhenConnectedChanged() {
             root.conditionVisible = root.showWhenConnected;
         }
     }
@@ -62,13 +48,12 @@ PluginComponent {
 
     // True when we are connected to a server and are inside a channel. This is
     // what makes the whole pill appear/disappear (empty channel still shows).
-    readonly property bool showWhenConnected: !root.hideWhenDisconnected || (root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0)
+    readonly property bool showWhenConnected: root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0
 
     // ----- Minimal i18n (mirrors the settings page keys) -----
     readonly property string _lang: pluginData.language || "zh"
     readonly property var _zh: ({
         "refreshCache": "刷新头像和昵称缓存",
-        "forceRefresh": "重新连接并刷新状态",
         "notConnected": "未连接到 TeamSpeak（请确认已安装 TS6 并在 设置 → Remote Apps 中启用）",
         "needAuth": "请在 TeamSpeak → 设置 → Remote Apps → 权限请求 中批准本应用以完成授权",
         "serverLabel": "服务器：",
@@ -83,7 +68,6 @@ PluginComponent {
     })
     readonly property var _en: ({
         "refreshCache": "Refresh avatar & nickname cache",
-        "forceRefresh": "Reconnect and refresh status",
         "notConnected": "Not connected to TeamSpeak (make sure TS6 is installed and Remote Apps is enabled)",
         "needAuth": "Approve this app in TeamSpeak → Settings → Remote Apps → Permission Requests",
         "serverLabel": "Server: ",
@@ -380,30 +364,27 @@ PluginComponent {
             headerText: root.ts6Service.channelName || "TS6 Monitor"
             showCloseButton: true
 
-            headerActions: Component {
-                Rectangle {
-                    property bool hovering: false
-                    width: 32
-                    height: 32
-                    radius: 16
-                    color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
-                    ToolTip.visible: hoverArea.containsMouse
-                    ToolTip.text: root.t("forceRefresh")
-                    DankIcon {
-                        anchors.centerIn: parent
-                        name: "refresh"
-                        size: Theme.iconSize - 4
-                        color: hoverArea.containsMouse ? Theme.primary : Theme.surfaceText
-                    }
-                    MouseArea {
-                        id: hoverArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.ts6Service.forceRefresh();
-                            root.ts6Service.refreshCache();
-                        }
+            headerActions: Rectangle {
+                property bool hovering: false
+                width: 32
+                height: 32
+                radius: 16
+                color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
+                ToolTip.visible: hoverArea.containsMouse
+                ToolTip.text: root.t("refreshCache")
+                DankIcon {
+                    anchors.centerIn: parent
+                    name: "refresh"
+                    size: Theme.iconSize - 4
+                    color: hoverArea.containsMouse ? Theme.primary : Theme.surfaceText
+                }
+                MouseArea {
+                    id: hoverArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.ts6Service.refreshCache()
                     }
                 }
             }

@@ -582,11 +582,6 @@ Singleton {
         return c ? c.clientId : -1;
     }
 
-    // Force a full re-poll: reconnect the WS (re-triggers auth + connection data)
-    function forceRefresh() {
-        root.reconnect();
-    }
-
     // Force a reconnect of the WebSocket (used when host/port/auth changes)
     function reconnect() {
         socket.active = false;
