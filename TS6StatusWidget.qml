@@ -133,6 +133,10 @@ PluginComponent {
     function leave() {
         root.ts6Service.triggerButton(root.leaveKey);
     }
+    function refresh() {
+        root.ts6Service.forceRefresh();
+        root.ts6Service.refreshCache();
+    }
 
     // Small circular icon button used on the pills.
     component PillActionButton: Rectangle {
@@ -292,22 +296,22 @@ PluginComponent {
                     spacing: 0
                     anchors.verticalCenter: parent.verticalCenter
                     PillActionButton {
-                        icon: (root.ts6Service.selfInputMuted || root.ts6Service.selfAway) ? "mic_off" : "mic"
-                        action: root.toggleMic
-                        highlighted: root.ts6Service.selfInputMuted || root.ts6Service.selfAway || root.ts6Service.selfTalking
+                        icon: root.showWhenConnected ? ((root.ts6Service.selfInputMuted || root.ts6Service.selfAway) ? "mic_off" : "mic") : "refresh"
+                        action: root.showWhenConnected ? root.toggleMic : root.refresh
+                        highlighted: root.showWhenConnected && (root.ts6Service.selfInputMuted || root.ts6Service.selfAway || root.ts6Service.selfTalking)
                     }
                     PillActionButton {
-                        icon: root.ts6Service.selfOutputMuted ? "volume_off" : "volume_up"
-                        action: root.toggleMute
-                        highlighted: root.ts6Service.selfOutputMuted
+                        icon: root.showWhenConnected ? (root.ts6Service.selfOutputMuted ? "volume_off" : "volume_up") : "refresh"
+                        action: root.showWhenConnected ? root.toggleMute : root.refresh
+                        highlighted: root.showWhenConnected && root.ts6Service.selfOutputMuted
                     }
                     PillActionButton {
-                        icon: root.ts6Service.selfAway ? "door_front" : "door_open"
-                        text: root.ts6Service.selfAway ? root.ts6Service.selfAwayMessage : ""
-                        action: root.leave
-                        tint: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.surfaceText
-                        highlightColor: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.primary
-                        highlighted: root.ts6Service.selfAway
+                        icon: root.showWhenConnected ? (root.ts6Service.selfAway ? "door_front" : "door_open") : "refresh"
+                        text: root.showWhenConnected && root.ts6Service.selfAway ? root.ts6Service.selfAwayMessage : ""
+                        action: root.showWhenConnected ? root.leave : root.refresh
+                        tint: root.showWhenConnected ? ((root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.surfaceText) : Theme.primary
+                        highlightColor: root.showWhenConnected ? ((root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.primary) : Theme.primary
+                        highlighted: root.showWhenConnected && root.ts6Service.selfAway
                     }
                 }
 
@@ -379,34 +383,6 @@ PluginComponent {
             id: popout
             headerText: root.ts6Service.channelName || "TS6 Monitor"
             showCloseButton: true
-
-            headerActions: Component {
-                Rectangle {
-                    property bool hovering: false
-                    width: 32
-                    height: 32
-                    radius: 16
-                    color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
-                    ToolTip.visible: hoverArea.containsMouse
-                    ToolTip.text: root.t("forceRefresh")
-                    DankIcon {
-                        anchors.centerIn: parent
-                        name: "refresh"
-                        size: Theme.iconSize - 4
-                        color: hoverArea.containsMouse ? Theme.primary : Theme.surfaceText
-                    }
-                    MouseArea {
-                        id: hoverArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.ts6Service.forceRefresh();
-                            root.ts6Service.refreshCache();
-                        }
-                    }
-                }
-            }
 
             Item {
                 width: parent.width
