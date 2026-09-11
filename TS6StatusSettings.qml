@@ -221,7 +221,7 @@ PluginSettings {
         settingKey: "hideWhenDisconnected"
         label: root.t("hideWhenDisconnectedLabel")
         description: root.t("hideWhenDisconnectedDesc")
-        defaultValue: true
+        defaultValue: false
     }
 
     ToggleSetting {

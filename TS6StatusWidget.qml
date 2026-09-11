@@ -13,8 +13,8 @@ PluginComponent {
     id: root
 
     // Hide the whole pill while not connected / not in a channel (toggleable in settings).
-    property bool hideWhenDisconnected: pluginData.hideWhenDisconnected !== false
-    visibilityCommand: "false"
+    property bool hideWhenDisconnected: pluginData.hideWhenDisconnected === true
+    visibilityCommand: root.hideWhenDisconnected ? "false" : ""
     Connections {
         target: svc
         function onNotifyTickChanged() {
@@ -380,29 +380,31 @@ PluginComponent {
             headerText: root.ts6Service.channelName || "TS6 Monitor"
             showCloseButton: true
 
-            headerActions: Rectangle {
-                property bool hovering: false
-                width: 32
-                height: 32
-                radius: 16
-                color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
-                ToolTip.visible: hoverArea.containsMouse
-                ToolTip.text: root.t("forceRefresh")
-                DankIcon {
-                    anchors.centerIn: parent
-                    name: "refresh"
-                    size: Theme.iconSize - 4
-                    color: hoverArea.containsMouse ? Theme.primary : Theme.surfaceText
-                }
-                MouseArea {
-                    id: hoverArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-onClicked: {
-                                root.ts6Service.forceRefresh();
-                                root.ts6Service.refreshCache();
-                            }
+            headerActions: Component {
+                Rectangle {
+                    property bool hovering: false
+                    width: 32
+                    height: 32
+                    radius: 16
+                    color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
+                    ToolTip.visible: hoverArea.containsMouse
+                    ToolTip.text: root.t("forceRefresh")
+                    DankIcon {
+                        anchors.centerIn: parent
+                        name: "refresh"
+                        size: Theme.iconSize - 4
+                        color: hoverArea.containsMouse ? Theme.primary : Theme.surfaceText
+                    }
+                    MouseArea {
+                        id: hoverArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.ts6Service.forceRefresh();
+                            root.ts6Service.refreshCache();
+                        }
+                    }
                 }
             }
 
