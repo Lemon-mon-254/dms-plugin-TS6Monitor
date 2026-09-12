@@ -19,6 +19,18 @@ PluginComponent {
         function onNotifyTickChanged() {
             root.conditionVisible = root.showWhenConnected;
         }
+        function onHasActiveConnectionChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
+        function onSelfChannelIdChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
+    }
+    Connections {
+        target: root
+        function onShowWhenConnectedChanged() {
+            root.conditionVisible = root.showWhenConnected;
+        }
     }
     Component.onCompleted: root.conditionVisible = root.showWhenConnected
 
