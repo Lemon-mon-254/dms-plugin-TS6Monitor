@@ -12,27 +12,27 @@ import "./components"
 PluginComponent {
     id: root
 
-    // Hide the whole pill via DMS's BasePill hidden state once not in a channel.
-    visibilityCommand: "false"
+    // Pill visibility driven directly via setVisibilityOverride (so the async
+    // visibilityCommand process can't clamp conditionVisible back to false).
     Connections {
         target: svc
         function onNotifyTickChanged() {
-            root.conditionVisible = root.showWhenConnected;
+            root.setVisibilityOverride(root.showWhenConnected);
         }
         function onHasActiveConnectionChanged() {
-            root.conditionVisible = root.showWhenConnected;
+            root.setVisibilityOverride(root.showWhenConnected);
         }
         function onSelfChannelIdChanged() {
-            root.conditionVisible = root.showWhenConnected;
+            root.setVisibilityOverride(root.showWhenConnected);
         }
     }
     Connections {
         target: root
         function onShowWhenConnectedChanged() {
-            root.conditionVisible = root.showWhenConnected;
+            root.setVisibilityOverride(root.showWhenConnected);
         }
     }
-    Component.onCompleted: root.conditionVisible = root.showWhenConnected
+    Component.onCompleted: root.setVisibilityOverride(root.showWhenConnected)
 
     // ----- Settings wiring -----
     property string hostSetting: pluginData.host || "127.0.0.1"
