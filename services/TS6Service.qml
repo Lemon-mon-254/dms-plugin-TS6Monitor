@@ -466,7 +466,12 @@ Singleton {
                 break;
             }
         }
-        return list;
+        const withAv = [];
+        const noAv = [];
+        for (let i = 0; i < list.length; i++) {
+            (root._hasAvatar(list[i]) ? withAv : noAv).push(list[i]);
+        }
+        return withAv.concat(noAv);
     }
 
     // Clients currently talking (across the whole active server), for the pill/badge
@@ -574,6 +579,14 @@ Singleton {
             if (u.startsWith("http://") || u.startsWith("https://")) return u;
         }
         return "";
+    }
+
+    function _hasAvatar(client) {
+        if (root.avatarUrl(client) !== "") return true;
+        const p = client.properties || {};
+        const key = root._cacheKeyFor(p, client.id);
+        const e = root._avatarCache[key];
+        return !!(e && e.avatar && String(e.avatar).trim() !== "");
     }
 
     // Id of ourselves within the active connection (-1 if unknown)
