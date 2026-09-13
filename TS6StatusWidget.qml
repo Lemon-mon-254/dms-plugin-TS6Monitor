@@ -244,7 +244,7 @@ PluginComponent {
                             }
                             DankIcon {
                                 anchors.fill: parent
-                                name: modelData.properties.outputMuted && !modelData.properties.inputMuted ? "volume_off" : "mic_off"
+                                name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
                                 size: 12
                                 color: Theme.primary
                             }
@@ -354,7 +354,7 @@ PluginComponent {
                             }
                             DankIcon {
                                 anchors.fill: parent
-                                name: modelData.properties.outputMuted && !modelData.properties.inputMuted ? "volume_off" : "mic_off"
+                                name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
                                 size: 12
                                 color: Theme.primary
                             }
@@ -528,7 +528,7 @@ PluginComponent {
                                     }
                                     DankIcon {
                                         anchors.fill: parent
-                                        name: modelData.properties.outputMuted && !modelData.properties.inputMuted ? "volume_off" : "mic_off"
+                                        name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
                                         size: 14
                                         color: Theme.primary
                                     }
