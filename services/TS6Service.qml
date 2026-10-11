@@ -502,6 +502,34 @@ Singleton {
         return undefined;
     }
 
+    // Returns the connection for connId, creating a skeleton if we have not
+    // seen it yet, and back-filling clientId once it is known. This matters on
+    // a cold boot: the auth payload can report zero connections (TS6 has not
+    // joined a server yet) while TS6 still streams events for a connection it
+    // is opening. Without this, every event is dropped until a status-4
+    // connectStatusChanged arrives - and by then the initial client burst has
+    // already passed, so the self client is lost for the whole session.
+    function _ensureConnection(connId, clientId) {
+        if (connId === undefined || connId === null) return undefined;
+        let conn = root.getConnection(connId);
+        if (!conn) {
+            conn = {
+                id: connId,
+                clientId: (clientId !== undefined && clientId !== null) ? clientId : -1,
+                name: "",
+                properties: {},
+                channels: {},
+                clients: {}
+            };
+            root.connections.push(conn);
+            if (root.activeConnectionId < 0) root.activeConnectionId = connId;
+        } else if ((conn.clientId === undefined || conn.clientId < 0)
+                   && clientId !== undefined && clientId !== null && clientId >= 0) {
+            conn.clientId = clientId;
+        }
+        return conn;
+    }
+
     function clientDisplayName(cl) {
         const p = cl && cl.properties ? cl.properties : {};
         return (p.nickname || p.name || p.clientNickName || p.clientNickname || p.displayName || "Unknown user");
@@ -883,20 +911,20 @@ Singleton {
             if (root.activeConnectionId === connId) {
                 root.activeConnectionId = root.connections.length ? root.connections[0].id : -1;
             }
-        } else if (status === 4) {
-            // connected - add skeleton, populated by subsequent channels/clientMoved events
-            let conn = root.getConnection(connId);
-            if (!conn) {
-                conn = { id: connId, clientId: data.payload.info ? data.payload.info.clientId : -1, name: "", properties: {}, channels: {}, clients: {} };
-                root.connections.push(conn);
-                root.activeConnectionId = connId;
-            }
+        } else if (status === 2 || status === 3 || status === 4) {
+            // Register the connection as soon as TS6 reports it. Status 2/3
+            // already carry info.clientId and arrive before the initial
+            // channel/client burst, so registering here (not just at status 4)
+            // is what stops the cold-boot event loss. Status 4 is still the
+            // point at which the connection becomes the active one.
+            root._ensureConnection(connId, data.payload.info ? data.payload.info.clientId : undefined);
+            if (status === 4 || root.activeConnectionId < 0) root.activeConnectionId = connId;
         }
         _notify();
     }
 
     function _handleServerPropertiesUpdated(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn) {
             conn.properties = data.payload.properties;
             conn.name = data.payload.properties.virtualserver_name || data.payload.properties.name || conn.name;
@@ -909,7 +937,7 @@ Singleton {
         // Heuristic: the connection this event belongs to is the one with focus
         root.activeConnectionId = connId;
         const flag = data.payload.flag;
-        const conn = root.getConnection(connId);
+        const conn = root._ensureConnection(connId);
             if (conn && conn.clients && conn.clientId >= 0 && conn.clients[conn.clientId]) {
                 const self = conn.clients[conn.clientId];
                 self.properties = self.properties || {};
@@ -922,7 +950,7 @@ Singleton {
     }
 
     function _handleClientPropertiesUpdated(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn && conn.clients && conn.clients[data.payload.clientId]) {
             const client = conn.clients[data.payload.clientId];
             client.properties = root._mergeObject(client.properties || {}, data.payload.properties || {});
@@ -932,7 +960,7 @@ Singleton {
     }
 
     function _handleTalkStatusChanged(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn && conn.clients && conn.clients[data.payload.clientId]) {
             conn.clients[data.payload.clientId].talkStatus = data.payload.status;
             _notify();
@@ -940,7 +968,7 @@ Singleton {
     }
 
     function _handleClientMoved(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (!conn) return;
         const clientId = data.payload.clientId;
         const oldChan = root._normChan(data.payload.oldChannelId);
@@ -985,7 +1013,7 @@ Singleton {
     }
 
     function _handleChannels(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (!conn) return;
         const info = data.payload.info;
         if (info) {
@@ -1002,7 +1030,7 @@ Singleton {
     }
 
     function _handleChannelCreated(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn) {
             conn.channels[data.payload.channelId] = {
                 id: data.payload.channelId,
@@ -1018,7 +1046,7 @@ Singleton {
     }
 
     function _handleChannelRemoved(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn && conn.channels && data.payload.channelId !== undefined) {
             delete conn.channels[data.payload.channelId];
             // any clients in that channel get cleared
@@ -1032,7 +1060,7 @@ Singleton {
     }
 
     function _handleChannelMoved(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn && conn.channels && conn.channels[data.payload.channelId]) {
             const ch = conn.channels[data.payload.channelId];
             ch.parentId = data.payload.newParent !== undefined ? data.payload.newParent : ch.parentId;
@@ -1042,7 +1070,7 @@ Singleton {
     }
 
     function _handleChannelPropertiesUpdated(data) {
-        const conn = root.getConnection(data.payload.connectionId);
+        const conn = root._ensureConnection(data.payload.connectionId);
         if (conn && conn.channels && conn.channels[data.payload.channelId]) {
             const ch = conn.channels[data.payload.channelId];
             ch.properties = data.payload.properties || ch.properties;
