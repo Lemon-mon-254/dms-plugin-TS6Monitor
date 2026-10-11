@@ -13,15 +13,15 @@ Singleton {
     // Runtime paths, resolved from the user's real config/cache locations so
     // the plugin works for any user (FileView writes proved unreliable in the
     // plugin sub-instance, so we shell out via Process).
-    readonly property string _home: Paths.strip(Paths.home)
     readonly property string _base: Paths.strip(Paths.config) + "/plugins/TS6Status"
     readonly property string apiKeyPath: root._base + "/apiKey.txt"
     readonly property string debugPath: root._base + "/debug.log"
     readonly property string avatarCachePath: root._base + "/avatarCache.json"
-    readonly property string avatarLocalDir: root._home + "/.cache/ts6avatar"
+    readonly property string avatarLocalDir: Paths.strip(Paths.cache) + "/ts6avatar"
 
     // File mirror for the debug ring below; enable in the plugin settings.
-    property bool debugLog: false
+    // (Named debugEnabled to avoid clashing with the debugLog() function below.)
+    property bool debugEnabled: false
 
     // Persistent cache of long-lived/nearly-invariant per-user data, keyed by the
     // member's stable databaseId (legacyUUID is only exposed for self/connection
@@ -324,7 +324,7 @@ Singleton {
 
     function debugLog(msg) {
         console.log("[TS6Service] " + msg);
-        if (!root.debugLog) return;
+        if (!root.debugEnabled) return;
         const line = new Date().toTimeString().slice(0, 8) + "  " + msg;
         _dbgLines.push(line);
         if (_dbgLines.length > 200) _dbgLines = _dbgLines.slice(-200);

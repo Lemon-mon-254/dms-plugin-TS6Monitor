@@ -104,7 +104,7 @@ PluginComponent {
     // ----- Forward settings into the service -----
     Binding { target: ts6Service; property: "serverHost"; value: root.hostSetting }
     Binding { target: ts6Service; property: "serverPort"; value: root.portSetting }
-    Binding { target: ts6Service; property: "debugLog"; value: root.debugLog }
+    Binding { target: ts6Service; property: "debugEnabled"; value: root.debugLog }
 
     // The mic / mute / volume functions work by sending discrete virtual key
     // presses that you bind in TeamSpeak -> Settings -> Key Bindings to the
