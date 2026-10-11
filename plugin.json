@@ -8,6 +8,7 @@
     "icon": "record_voice_over",
     "type": "widget",
     "capabilities": ["dankbar-widget", "teamspeak", "voice"],
+    "dependencies": ["pactl", "curl"],
     "component": "./TS6StatusWidget.qml",
     "settings": "./TS6StatusSettings.qml",
     "requires_dms": ">=1.4.0",
