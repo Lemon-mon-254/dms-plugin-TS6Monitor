@@ -14,7 +14,9 @@ Singleton {
     // the plugin works for any user (FileView writes proved unreliable in the
     // plugin sub-instance, so we shell out via Process).
     readonly property string _home: Paths.strip(Paths.home)
-    readonly property string _base: Paths.strip(Paths.config) + "/plugins/TS6Status"
+    // DMS stores user plugins under <config>/DankMaterialShell/plugins. Paths.config
+    // is the XDG config dir (~/.config), so it is not the DMS dir by itself.
+    readonly property string _base: Paths.strip(StandardPaths.writableLocation(StandardPaths.ConfigLocation)) + "/DankMaterialShell/plugins/TS6Status"
     readonly property string apiKeyPath: root._base + "/apiKey.txt"
     readonly property string debugPath: root._base + "/debug.log"
     readonly property string avatarCachePath: root._base + "/avatarCache.json"
@@ -119,7 +121,7 @@ Singleton {
                     entry.local = root._avatarLocalPath(key);
                     entry.downloaded = true;
                     root._saveCache();
-                    root.debugLog("[AVD] downloaded " + key + " -> " + entry.local + " (code " + exitCode + ")");
+                    root._log("[AVD] downloaded " + key + " -> " + entry.local + " (code " + exitCode + ")");
                     root._notify();
                 }
             }
@@ -176,10 +178,10 @@ Singleton {
         }
         root._avatarCache = (obj && typeof obj === "object") ? obj : {};
         root._avatarCacheLoaded = true;
-        root.debugLog("[CACHE] loaded " + Object.keys(root._avatarCache).length + " entries");
+        root._log("[CACHE] loaded " + Object.keys(root._avatarCache).length + " entries");
         for (const k in root._avatarCache) {
             const e = root._avatarCache[k];
-            root.debugLog("[CACHE] " + k + " local=" + (e && e.local) + " dl=" + (e && e.downloaded) + " av=" + (e && e.avatar ? "y" : "n"));
+            root._log("[CACHE] " + k + " local=" + (e && e.local) + " dl=" + (e && e.downloaded) + " av=" + (e && e.avatar ? "y" : "n"));
         }
         root._notify();
     }
@@ -213,7 +215,7 @@ Singleton {
         };
         root._avatarCache[key] = entry;
         root._saveCache();
-        root.debugLog("[CACHE] fill " + key + " nick='" + entry.nick + "' avatar=" + (entry.avatar ? "yes" : "no"));
+        root._log("[CACHE] fill " + key + " nick='" + entry.nick + "' avatar=" + (entry.avatar ? "yes" : "no"));
         root._downloadAvatar(key, entry);
     }
 
@@ -252,7 +254,7 @@ Singleton {
                 }
             }
         }
-        root.debugLog("[CACHE] refreshed");
+        root._log("[CACHE] refreshed");
     }
 
     // =============================================================
@@ -322,7 +324,10 @@ Singleton {
     // quickshell's log.log).
     property var _dbgLines: []
 
-    function debugLog(msg) {
+    // NB: must not be named debugLog — that identifier is the bool property
+    // below (bound from plugin settings), and the collision silently swallows
+    // every call (and aborts the handler it is called from).
+    function _log(msg) {
         console.log("[TS6Service] " + msg);
         if (!root.debugLog) return;
         const line = new Date().toTimeString().slice(0, 8) + "  " + msg;
@@ -339,7 +344,7 @@ Singleton {
     // Fixed lowercase identifier. The first connection must be approved in
     // TeamSpeak (Settings -> Remote Apps), after which the client returns an
     // apiKey that we persist and reuse.
-    readonly property string appIdentifier: "com.dms.tsMonitor"
+    readonly property string appIdentifier: "com.dms.ts6status"
     readonly property string appName: "TS6 Monitor"
     readonly property string appDescription: "DankMaterialShell TeamSpeak 6 status monitor"
 
@@ -668,7 +673,7 @@ Singleton {
 
         onStatusChanged: {
             root.lastError = "";
-            root.debugLog("STATUS -> " + socket.status);
+            root._log("STATUS -> " + socket.status);
             if (socket.status === WebSocket.Open) {
                 root.connected = true;
                 root.pendingAuth = false;
@@ -691,7 +696,7 @@ Singleton {
                 return;
             }
             if (data.type !== "auth") {
-                root.debugLog("EVENT " + data.type + " " + JSON.stringify(data.payload || {}).slice(0, 400));
+                root._log("EVENT " + data.type + " " + JSON.stringify(data.payload || {}).slice(0, 400));
             }
             switch (data.type) {
                 case "auth": _handleAuth(data); break;
@@ -736,7 +741,7 @@ Singleton {
         repeat: true
         running: root.connected && !root.authenticated
         onTriggered: {
-            root.debugLog("re-sending auth (auth=" + root.authenticated + " pending=" + root.pendingAuth + ")");
+            root._log("re-sending auth (auth=" + root.authenticated + " pending=" + root.pendingAuth + ")");
             _sendAuth();
         }
     }
@@ -769,7 +774,7 @@ Singleton {
 
     function _handleAuth(data) {
         const authConns = (data.payload && data.payload.connections) || [];
-        root.debugLog("AUTH payload connections=[" + authConns.length + "]");
+        root._log("AUTH payload connections=[" + authConns.length + "]");
         if (data.status && data.status.code === 0) {
             root.authenticated = true;
             root.pendingAuth = false;
@@ -788,16 +793,16 @@ Singleton {
                         root.connections.push(conn);
                         if (root.activeConnectionId < 0) root.activeConnectionId = conn.id;
                         _populateConnection(conn, connPayload);
-                        root.debugLog("CONN " + conn.id + " name='" + conn.name + "' clientId=" + conn.clientId
+                        root._log("CONN " + conn.id + " name='" + conn.name + "' clientId=" + conn.clientId
                             + " channels=" + Object.keys(conn.channels).length
                             + " clients=" + Object.keys(conn.clients).length);
                     } catch (e) {
-                        root.debugLog("AUTH conn ERR " + e);
+                        root._log("AUTH conn ERR " + e);
                     }
                 });
                 root.connections = root.connections.slice();
             }
-            root.debugLog("POST-AUTH active=" + root.activeConnectionId
+            root._log("POST-AUTH active=" + root.activeConnectionId
                 + " selfChannel=" + root.selfChannelId
                 + " channelClients=" + root.channelClients.length
                 + " talking=" + root.talkingCount);
@@ -853,7 +858,7 @@ Singleton {
                     }
                 }
             }
-        } catch (e) { root.debugLog("POP channel ERR " + e); }
+        } catch (e) { root._log("POP channel ERR " + e); }
         // Clients from clientInfos
         try {
             if (payload.clientInfos) {
@@ -866,7 +871,7 @@ Singleton {
                     };
                 });
             }
-        } catch (e) { root.debugLog("POP client ERR " + e); }
+        } catch (e) { root._log("POP client ERR " + e); }
         if (payload.clients) {
             for (const clKey in payload.clients) {
                 const cl = payload.clients[clKey];
@@ -944,7 +949,7 @@ Singleton {
                 if (flag !== undefined && data.payload.newValue !== undefined) {
                     self.properties[flag] = data.payload.newValue;
                 }
-                root.debugLog("SELF flag=" + flag + " away=" + self.properties.away + " inputMuted=" + self.properties.inputMuted + " outputMuted=" + self.properties.outputMuted);
+                root._log("SELF flag=" + flag + " away=" + self.properties.away + " inputMuted=" + self.properties.inputMuted + " outputMuted=" + self.properties.outputMuted);
                 _notify();
             }
     }
@@ -954,7 +959,7 @@ Singleton {
         if (conn && conn.clients && conn.clients[data.payload.clientId]) {
             const client = conn.clients[data.payload.clientId];
             client.properties = root._mergeObject(client.properties || {}, data.payload.properties || {});
-            if (data.payload.clientId === conn.clientId) root.debugLog("CLIENTPROPS self=" + JSON.stringify(data.payload.properties || {}));
+            if (data.payload.clientId === conn.clientId) root._log("CLIENTPROPS self=" + JSON.stringify(data.payload.properties || {}));
             _notify();
         }
     }

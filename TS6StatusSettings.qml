@@ -5,7 +5,7 @@ import qs.Widgets
 
 PluginSettings {
     id: root
-    pluginId: "tsMonitor"
+    pluginId: "ts6status"
 
     property string _lang: "zh"
     readonly property var _zh: ({
