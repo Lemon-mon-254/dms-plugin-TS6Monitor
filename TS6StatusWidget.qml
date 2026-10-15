@@ -16,6 +16,9 @@ PluginComponent {
     // visibilityCommand process can't clamp conditionVisible back to false).
     Connections {
         target: svc
+        function onConnectedChanged() {
+            root.setVisibilityOverride(root.showWhenConnected);
+        }
         function onNotifyTickChanged() {
             root.setVisibilityOverride(root.showWhenConnected);
         }
@@ -58,9 +61,12 @@ PluginComponent {
         : 20
     readonly property real pillControlsWidth: root.showWhenConnected ? 20 + 20 + root._leaveBtnW : 0
 
-    // True when we are connected to a server and are inside a channel. This is
-    // what makes the whole pill appear/disappear (empty channel still shows).
-    readonly property bool showWhenConnected: root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0
+    // True when the Remote Apps socket is up, we are connected to a server and
+    // are inside a channel. This is what makes the whole pill appear/disappear
+    // (empty channel still shows). Requiring `connected` makes the pill hide as
+    // soon as TeamSpeak quits / the socket drops, even if the server model has
+    // not been cleared yet.
+    readonly property bool showWhenConnected: root.ts6Service.connected && root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0
 
     // ----- Minimal i18n (mirrors the settings page keys) -----
     readonly property string _lang: pluginData.language || "zh"

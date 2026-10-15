@@ -681,6 +681,17 @@ Singleton {
             } else if (socket.status === WebSocket.Closed || socket.status === WebSocket.Error) {
                 root.connected = false;
                 root.authenticated = false;
+                root.pendingAuth = false;
+                // Drop the ingested server model whenever the socket goes away.
+                // Otherwise a stale connection object keeps hasActiveConnection
+                // (and selfChannelId) true and the pill would linger after the
+                // user quits TeamSpeak / disconnects from the channel.
+                if (root.connections.length > 0 || root.activeConnectionId !== -1) {
+                    root._log("SOCKET DOWN: clearing server model (was " + root.connections.length + " conn(s), active=" + root.activeConnectionId + ")");
+                    root.connections = [];
+                    root.activeConnectionId = -1;
+                    _notify();
+                }
             }
         }
 
