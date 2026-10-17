@@ -5,6 +5,7 @@ import QtQuick
 import QtWebSockets
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import qs.Common
 
 Singleton {
@@ -13,17 +14,18 @@ Singleton {
     // Runtime paths, resolved from the user's real config/cache locations so
     // the plugin works for any user (FileView writes proved unreliable in the
     // plugin sub-instance, so we shell out via Process).
-    readonly property string _home: Paths.strip(Paths.home)
     // DMS stores user plugins under <config>/DankMaterialShell/plugins. Paths.config
     // is the XDG config dir (~/.config), so it is not the DMS dir by itself.
     readonly property string _base: Paths.strip(StandardPaths.writableLocation(StandardPaths.ConfigLocation)) + "/DankMaterialShell/plugins/TS6Status"
     readonly property string apiKeyPath: root._base + "/apiKey.txt"
     readonly property string debugPath: root._base + "/debug.log"
     readonly property string avatarCachePath: root._base + "/avatarCache.json"
-    readonly property string avatarLocalDir: root._home + "/.cache/ts6avatar"
+    // Keep downloaded avatars inside DMS's own cache tree instead of a
+    // top-level ~/.cache directory.
+    readonly property string avatarLocalDir: Paths.strip(Paths.cache) + "/ts6avatar"
 
     // File mirror for the debug ring below; enable in the plugin settings.
-    property bool debugLog: false
+    property bool debugEnabled: false
 
     // Persistent cache of long-lived/nearly-invariant per-user data, keyed by the
     // member's stable databaseId (legacyUUID is only exposed for self/connection
@@ -179,10 +181,24 @@ Singleton {
         root._avatarCache = (obj && typeof obj === "object") ? obj : {};
         root._avatarCacheLoaded = true;
         root._log("[CACHE] loaded " + Object.keys(root._avatarCache).length + " entries");
+        let cacheChanged = false;
         for (const k in root._avatarCache) {
             const e = root._avatarCache[k];
-            root._log("[CACHE] " + k + " local=" + (e && e.local) + " dl=" + (e && e.downloaded) + " av=" + (e && e.avatar ? "y" : "n"));
+            if (!e || typeof e !== "object")
+                continue;
+            // Migrate entries written by older versions from ~/.cache/ts6avatar
+            // into DMS's cache tree. Mark them for download again so the new
+            // local path is populated.
+            const expectedLocal = root._avatarLocalPath(k);
+            if (e.local !== expectedLocal) {
+                e.local = expectedLocal;
+                e.downloaded = false;
+                cacheChanged = true;
+            }
+            root._log("[CACHE] " + k + " local=" + e.local + " dl=" + e.downloaded + " av=" + (e.avatar ? "y" : "n"));
         }
+        if (cacheChanged)
+            root._saveCache();
         root._notify();
     }
 
@@ -261,75 +277,104 @@ Singleton {
     // TeamSpeak (PipeWire) overall output volume control
     // =============================================================
     // The overall TS output volume is a PipeWire sink-input owned by the
-    // TeamSpeak client. We locate it by application.name and read/set its
-    // volume via pactl (pactl ships with PipeWire everywhere).
-    property real tsVolume01: -1   // 0..1, -1 = unknown
-    readonly property bool tsVolumeKnown: root.tsVolume01 >= 0
+    // TeamSpeak client. Read and set it through Quickshell's Pipewire service
+    // so no process is spawned on a timer.
+    // DMS AudioService only tracks output streams when "show stream devices"
+    // is enabled, so track audio nodes here as well; otherwise TeamSpeak's
+    // sink-input would have no usable properties/audio interface.
+    PwObjectTracker {
+        objects: Pipewire.nodes ? Pipewire.nodes.values.filter(node => node.audio) : []
+    }
 
-    property string _tsVolStr: ""
-    Process {
-        id: _tsVolRead
-        stdout: StdioCollector {
-            id: _tsVolReadCol
-            waitForEnd: true
-            onStreamFinished: {
-                root._tsVolStr = _tsVolReadCol.text || "";
-                const m = root._tsVolStr.match(/id=\d+ vol=(\d+)/);
-                if (m) root.tsVolume01 = parseInt(m[1], 10) / 100;
-                else root.tsVolume01 = -1;
+    property PwNode tsSinkNode: null
+    property real tsVolume01: -1   // 0..1, -1 = unknown
+    readonly property bool tsVolumeKnown: root.tsSinkNode !== null && root.tsSinkNode.audio !== null
+    property int _sinkRetryCount: 0
+
+    // Pipewire announces new nodes before their properties/audio interfaces are
+    // fully populated. Retry a few times (single-shot, no external process) so a
+    // newly started TeamSpeak is found shortly after its nodes appear.
+    Timer {
+        id: _sinkRetry
+        interval: 300
+        repeat: false
+        onTriggered: root._refreshTsSinkNode()
+    }
+
+    function _refreshTsSinkNode() {
+        const nodes = Pipewire.nodes ? Pipewire.nodes.values : [];
+        let found = null;
+        for (const node of nodes) {
+            if (!node || !node.isStream || !node.isSink || !node.audio)
+                continue;
+            const props = node.properties || {};
+            const appName = String(props["application.name"] || "");
+            const binary = String(props["application.process.binary"] || "").toLowerCase();
+            if (appName === "TeamSpeak" || binary.indexOf("teamspeak") !== -1) {
+                found = node;
+                break;
             }
         }
-        onExited: () => {
-            _tsVolRead.running = false;
+        root.tsSinkNode = found;
+        root._syncTsVolume();
+        if (found) {
+            root._sinkRetryCount = 0;
+            _sinkRetry.stop();
+        } else if (nodes.length > 0 && root._sinkRetryCount < 10) {
+            root._sinkRetryCount++;
+            _sinkRetry.start();
         }
     }
-    Process {
-        id: _tsVolSet
-        onExited: (exitCode, exitStatus) => { _tsVolSet.running = false; }
+
+    function _syncTsVolume() {
+        const node = root.tsSinkNode;
+        root.tsVolume01 = (node && node.audio) ? node.audio.volume : -1;
+    }
+    onTsSinkNodeChanged: {
+        root._syncTsVolume();
+        root._log("[VOL] sink=" + (root.tsSinkNode ? root.tsSinkNode.name : "none") + " volume=" + root.tsVolume01);
     }
 
-    function refreshTsVolume() {
-        if (_tsVolRead.running) return;
-        root._tsVolStr = "";
-        _tsVolRead.command = ["/bin/sh", "-c",
-            "pactl list sink-inputs | awk '/Sink Input #[0-9]+/{id=substr($3,2);vol=\"\"} /Volume: front-left:/{for(i=1;i<=NF;i++) if($i ~ /%$/){gsub(/[^0-9]/,\"\",$i);vol=$i}} /application.name = \"TeamSpeak\"/{print \"id=\" id \" vol=\" vol; exit}'",
-            "sh"];
-        _tsVolRead.running = true;
+    Connections {
+        target: Pipewire
+        function onReadyChanged() {
+            root._refreshTsSinkNode();
+        }
+    }
+
+    Connections {
+        target: Pipewire.nodes
+        function onValuesChanged() {
+            root._sinkRetryCount = 0;
+            root._refreshTsSinkNode();
+        }
+    }
+
+    Connections {
+        target: root.tsSinkNode ? root.tsSinkNode.audio : null
+        function onVolumesChanged() {
+            root._syncTsVolume();
+        }
     }
 
     function setTsVolume01(v) {
+        const node = root.tsSinkNode;
+        if (!node || !node.audio) return;
         v = Math.max(0, Math.min(1, v));
-        root.tsVolume01 = Math.round(v * 100) / 100;
-        root.volumeUserChanged(root.tsVolume01);
-        if (_tsVolSet.running) return;
-        _tsVolSet.command = ["/bin/sh", "-c",
-            "p=$(pactl list sink-inputs | awk '/Sink Input #[0-9]+/{id=substr($3,2)} /application.name = \"TeamSpeak\"/{print id; exit}') && [ -n \"$p\" ] && pactl set-sink-input-volume \"$p\" " + Math.round(v*100) + "% || true",
-            "sh"];
-        _tsVolSet.running = true;
+        node.audio.volume = v;
+        root.tsVolume01 = v;
+        root.volumeUserChanged(v);
     }
     signal volumeUserChanged(real v)
-
-    // Keep the displayed TS volume fresh while connected.
-    Timer {
-        id: tsVolRefresh
-        interval: 3000
-        repeat: true
-        running: root.connected
-        onTriggered: root.refreshTsVolume()
-    }
-    onConnectedChanged: { if (root.connected) root.refreshTsVolume(); }
 
     // Keep a small ring of debug lines and mirror them to a file so we can
     // inspect the live auth/socket flow (plugin console.log is not captured in
     // quickshell's log.log).
     property var _dbgLines: []
 
-    // NB: must not be named debugLog — that identifier is the bool property
-    // below (bound from plugin settings), and the collision silently swallows
-    // every call (and aborts the handler it is called from).
     function _log(msg) {
         console.log("[TS6Service] " + msg);
-        if (!root.debugLog) return;
+        if (!root.debugEnabled) return;
         const line = new Date().toTimeString().slice(0, 8) + "  " + msg;
         _dbgLines.push(line);
         if (_dbgLines.length > 200) _dbgLines = _dbgLines.slice(-200);
@@ -1116,6 +1161,7 @@ Singleton {
         _loadApiKey();
         _cacheReadProc.command = ["/bin/sh", "-c", "cat \"$1\" 2>/dev/null", "sh", avatarCachePath];
         _cacheReadProc.running = true;
+        _refreshTsSinkNode();
     }
 
     // Kept for compatibility; the widget no longer relies on it.

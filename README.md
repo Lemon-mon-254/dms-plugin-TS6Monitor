@@ -22,13 +22,14 @@
   - 服务器 / 频道 / 人数信息行（可开关）
   - 成员列表：头像、昵称、说话 / 静音 / 离开状态
   - 每个成员的只读音量条；自己的音量可调
-- **中英双语界面** —— 在设置中即时切换，胶囊、弹窗、设置页同步生效
+- **跟随系统语言** —— 英文源字符串 + 内置简体中文翻译（DMS 1.6+ 自动加载）
 - 未连接或未进入频道时胶囊自动隐藏
 
 ## 环境要求
 
 - DankMaterialShell（DMS）>= 1.4.0
 - TeamSpeak 6 客户端，并启用 **Remote Apps**
+- `curl`（用于下载成员头像）
 - Linux（已在 CachyOS / niri / Wayland 上使用）
 
 ## 安装
@@ -70,10 +71,10 @@
 
 | 选项 | 说明 |
 |------|------|
-| 语言 / Language | 在中文与英文之间即时切换界面 |
 | 主机 / 端口 | Remote Apps WebSocket 地址（默认 `127.0.0.1:5899`） |
 | 麦克风/扬声器/离开按键标识符 | 胶囊按钮对应的虚拟按键 ID |
 | 显示头像 / 音量 / 服务器 / 频道 / 人数 | 开关对应界面元素 |
+| 调试日志 | 将诊断信息写入插件目录下的 `debug.log`（默认关闭） |
 
 ## 使用技巧
 
@@ -87,9 +88,14 @@
 - 请勿修改"主机"设置为远程地址，或通过防火墙把 Remote Apps 端口暴露到不受信任的网络；如需无法连接请保持本机回环。
 - `apiKey.txt` 中保存的授权密钥仅存放在你的插件目录（`.gitignore` 已排除），请勿提交或分享。
 
+## 与 TeamSpeak Status 的区别
+
+[TeamSpeak Status](https://github.com/thisilike/dms-plugin-teamspeak) 是另一个已收录的 TeamSpeak 状态插件，需要额外运行 `ts-status` 外部守护进程。本项目直接使用 TeamSpeak 6 官方 **Remote Apps API**（WebSocket），无需外部守护进程，并额外提供胶囊上的麦克风/扬声器/离开控制、频道成员头像和整体音量调节。两者可以按需选择。
+
 ## 兼容性
 
 - 在 DMS 1.x + niri（Wayland）+ PulseAudio/PipeWire 环境下开发与测试。
+- TeamSpeak 音量通过 Quickshell 的 Pipewire 节点直接读写，不再定时调用 `pactl`。
 - 若系统栏为竖排，请使用纵向胶囊变体。
 
 ## 开源协议

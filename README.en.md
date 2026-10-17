@@ -22,13 +22,14 @@ A **TeamSpeak 6** status monitor widget for [DankMaterialShell](https://danklinu
   - Server / channel / member count rows (optional)
   - Member list with avatars, nicknames, talking / muted / away states
   - Per-member read-only volume bar; adjustable overall volume for yourself
-- **Bilingual UI** — 中文 / English, switch instantly in the settings (applies to the pill, popout and settings page)
+- **Follows the system language** — English source strings plus a bundled Simplified Chinese translation (loaded automatically by DMS 1.6+)
 - Pill hides automatically when you are not connected to / inside a channel
 
 ## Requirements
 
 - DankMaterialShell (DMS) >= 1.4.0
 - TeamSpeak 6 client with **Remote Apps** enabled
+- `curl` (used to download member avatars)
 - Linux (developed on CachyOS / niri / Wayland)
 
 ## Installation
@@ -70,10 +71,10 @@ The virtual key identifiers default to `dms.ts6.mic`, `dms.ts6.mute`, `dms.ts6.l
 
 | Option | Description |
 |--------|-------------|
-| 语言 / Language | Switch the UI between Chinese and English instantly |
 | Host / Port | Remote Apps WebSocket endpoint (default `127.0.0.1:5899`) |
 | Mic / Speaker / Away key ID | Virtual key identifiers for the pill buttons |
 | Show avatars / volume / server / channel / member count | Toggle the corresponding UI elements |
+| Debug log | Write diagnostics to `debug.log` in the plugin directory (off by default) |
 
 ## Usage tips
 
@@ -81,9 +82,14 @@ The virtual key identifiers default to `dms.ts6.mic`, `dms.ts6.mute`, `dms.ts6.l
 - The away button shows your away message on the pill while you are away.
 - Refresh avatars / nicknames via the refresh icon in the popout header.
 
+## Compared with TeamSpeak Status
+
+[TeamSpeak Status](https://github.com/thisilike/dms-plugin-teamspeak) is another listed TeamSpeak widget and requires an external `ts-status` daemon. This plugin talks directly to the official TeamSpeak 6 **Remote Apps API** (WebSocket), needs no daemon, and adds controls for microphone / speaker / away on the pill, channel-member avatars, and overall volume adjustment. Pick whichever fits your setup.
+
 ## Compatibility
 
 - Built and tested on DMS 1.x with niri (Wayland), PulseAudio/PipeWire.
+- TeamSpeak volume is read and written through Quickshell Pipewire nodes instead of polling `pactl`.
 - If your bar is vertical, use the vertical pill variant.
 
 ## Security notes

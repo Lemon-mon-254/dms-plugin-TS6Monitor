@@ -48,7 +48,7 @@ PluginComponent {
     property bool showServerName: pluginData.showServerName === true
     property bool showCurrentChannel: pluginData.showCurrentChannel === true
     property bool showChannelCount: pluginData.showChannelCount === true
-    property bool debugLog: pluginData.debugLog === true
+    readonly property bool debugEnabled: pluginData.debugEnabled === true || pluginData.debugLog === true
 
     // Slightly larger avatar shown on the capsules, plus a speaking ring.
     readonly property real pillAvatarSize: 30
@@ -68,38 +68,14 @@ PluginComponent {
     // not been cleared yet.
     readonly property bool showWhenConnected: root.ts6Service.connected && root.ts6Service.notifyTick >= 0 && root.ts6Service.hasActiveConnection && root.ts6Service.selfChannelId > 0
 
-    // ----- Minimal i18n (mirrors the settings page keys) -----
-    readonly property string _lang: pluginData.language || "zh"
-    readonly property var _zh: ({
-        "refreshCache": "刷新头像和昵称缓存",
-        "notConnected": "未连接到 TeamSpeak（请确认已安装 TS6 并在 设置 → Remote Apps 中启用）",
-        "needAuth": "请在 TeamSpeak → 设置 → Remote Apps → 权限请求 中批准本应用以完成授权",
-        "serverLabel": "服务器：",
-        "channelLabel": "频道：",
-        "countLabel": "人数：",
-        "unknownUser": "未知用户",
-        "talking": "正在说话",
-        "micMuted": "麦克风已静音",
-        "outputMuted": "已静音（听不到）",
-        "awayStatus": "离开",
-        "notConnectedTitle": "未连接"
-    })
-    readonly property var _en: ({
-        "refreshCache": "Refresh avatar & nickname cache",
-        "notConnected": "Not connected to TeamSpeak (make sure TS6 is installed and Remote Apps is enabled)",
-        "needAuth": "Approve this app in TeamSpeak → Settings → Remote Apps → Permission Requests",
-        "serverLabel": "Server: ",
-        "channelLabel": "Channel: ",
-        "countLabel": "Members: ",
-        "unknownUser": "Unknown user",
-        "talking": "Talking",
-        "micMuted": "Microphone muted",
-        "outputMuted": "Muted (can't hear)",
-        "awayStatus": "Away",
-        "notConnectedTitle": "Not connected"
-    })
-    readonly property var _dict: root._lang === "en" ? root._en : root._zh
-    function t(key) { return root._dict[key] !== undefined ? root._dict[key] : key }
+    // ----- Plugin i18n (English source strings + translations/) -----
+    // DMS 1.6+ loads translations/<locale>.json for plugins. Keep the fallback
+    // to I18n.tr() so older DMS versions still show the English source string.
+    function tr(term) {
+        if (typeof I18n.trFor === "function")
+            return I18n.trFor("ts6status", term, "ts6status");
+        return I18n.tr(term);
+    }
 
     // ----- The TS6 status service (one instance per widget) -----
     readonly property var ts6Service: svc
@@ -110,7 +86,7 @@ PluginComponent {
     // ----- Forward settings into the service -----
     Binding { target: ts6Service; property: "serverHost"; value: root.hostSetting }
     Binding { target: ts6Service; property: "serverPort"; value: root.portSetting }
-    Binding { target: ts6Service; property: "debugLog"; value: root.debugLog }
+    Binding { target: ts6Service; property: "debugEnabled"; value: root.debugEnabled }
 
     // The mic / mute / volume functions work by sending discrete virtual key
     // presses that you bind in TeamSpeak -> Settings -> Key Bindings to the
@@ -157,14 +133,14 @@ PluginComponent {
             visible: btnRoot.text !== ""
             text: btnRoot.text
             color: (hoverArea.containsMouse || btnRoot.highlighted) ? btnRoot.highlightColor : btnRoot.tint
-            font.pixelSize: 11
+            font.pixelSize: Theme.fontSizeSmall
             elide: Text.ElideRight
             maximumLineCount: 1
         }
         DankIcon {
             anchors.centerIn: parent
             name: btnRoot.icon
-            size: 15
+            size: Theme.iconSizeSmall - 1
             visible: btnRoot.text === ""
             color: (hoverArea.containsMouse || btnRoot.highlighted) ? btnRoot.highlightColor : btnRoot.tint
         }
@@ -246,12 +222,12 @@ PluginComponent {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: width / 2
-                                color: "#1f1f27"
+                                color: Theme.surfaceContainer
                             }
                             DankIcon {
                                 anchors.fill: parent
                                 name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
-                                size: 12
+                                size: Theme.iconSizeSmall - 4
                                 color: Theme.primary
                             }
                         }
@@ -307,8 +283,8 @@ PluginComponent {
                         icon: root.ts6Service.selfAway ? "door_front" : "door_open"
                         text: root.ts6Service.selfAway ? root.ts6Service.selfAwayMessage : ""
                         action: root.leave
-                        tint: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.surfaceText
-                        highlightColor: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? "#ff8b04" : Theme.primary
+                        tint: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? Theme.warning : Theme.surfaceText
+                        highlightColor: (root.ts6Service.selfAway && root.ts6Service.selfOutputMuted) ? Theme.warning : Theme.primary
                         highlighted: root.ts6Service.selfAway
                     }
                 }
@@ -356,12 +332,12 @@ PluginComponent {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: width / 2
-                                color: "#1f1f27"
+                                color: Theme.surfaceContainer
                             }
                             DankIcon {
                                 anchors.fill: parent
                                 name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
-                                size: 12
+                                size: Theme.iconSizeSmall - 4
                                 color: Theme.primary
                             }
                         }
@@ -389,7 +365,7 @@ PluginComponent {
                 radius: 16
                 color: hoverArea.containsMouse ? Theme.surfaceContainerHigh : Theme.withAlpha(Theme.surfaceContainerHigh, 0)
                 ToolTip.visible: hoverArea.containsMouse
-                ToolTip.text: root.t("refreshCache")
+                ToolTip.text: root.tr("Refresh avatar & nickname cache")
                 DankIcon {
                     anchors.centerIn: parent
                     name: "refresh"
@@ -419,9 +395,9 @@ PluginComponent {
                     // Auth / connection hint
                     StyledText {
                         text: {
-                            if (!root.ts6Service.connected) return root.t("notConnected")
+                            if (!root.ts6Service.connected) return root.tr("Not connected to TeamSpeak (make sure TS6 is installed and Remote Apps is enabled)")
                             if (root.ts6Service.pendingAuth || !root.ts6Service.authenticated)
-                                return root.t("needAuth")
+                                return root.tr("Approve this app in TeamSpeak → Settings → Remote Apps → Permission Requests")
                             return ""
                         }
                         visible: text !== ""
@@ -439,21 +415,21 @@ PluginComponent {
 
                         StyledText {
                             visible: root.showServerName
-                            text: root.t("serverLabel") + (root.ts6Service.serverName || "—")
+                            text: root.tr("Server: %1").arg(root.ts6Service.serverName || "—")
                             color: Theme.primary
                             font.pixelSize: Theme.fontSizeSmall
                             elide: Text.ElideRight
                         }
                         StyledText {
                             visible: root.showCurrentChannel
-                            text: root.t("channelLabel") + (root.ts6Service.channelName || "—")
+                            text: root.tr("Channel: %1").arg(root.ts6Service.channelName || "—")
                             color: Theme.primary
                             font.pixelSize: Theme.fontSizeSmall
                             elide: Text.ElideRight
                         }
                         StyledText {
                             visible: root.showChannelCount
-                            text: root.t("countLabel") + root.ts6Service.channelClientCount
+                            text: root.tr("Members: %1").arg(root.ts6Service.channelClientCount)
                             color: Theme.primary
                             font.pixelSize: Theme.fontSizeSmall
                         }
@@ -530,12 +506,12 @@ PluginComponent {
                                     Rectangle {
                                         anchors.fill: parent
                                         radius: width / 2
-                                        color: "#1f1f27"
+                                        color: Theme.surfaceContainer
                                     }
                                     DankIcon {
                                         anchors.fill: parent
                                         name: modelData.properties.outputMuted ? "volume_off" : "mic_off"
-                                        size: 14
+                                        size: Theme.iconSizeSmall - 2
                                         color: Theme.primary
                                     }
                                 }
@@ -547,7 +523,7 @@ PluginComponent {
                                 spacing: 8
 
                                 StyledText {
-                                    text: root.ts6Service.cachedNick(modelData) || modelData.displayName || modelData.properties.nickname || modelData.properties.name || root.t("unknownUser")
+                                    text: root.ts6Service.cachedNick(modelData) || modelData.displayName || modelData.properties.nickname || modelData.properties.name || root.tr("Unknown user")
                                     color: row.isSelf ? Theme.primary : Theme.surfaceText
                                     font.pixelSize: Theme.fontSizeMedium
                                     font.bold: row.isSelf
@@ -556,13 +532,13 @@ PluginComponent {
 
                                 StyledText {
                                     text: {
-                                        if (row.isTalking) return root.t("talking")
-                                        if (modelData.properties.inputMuted) return root.t("micMuted")
-                                        if (modelData.properties.outputMuted) return root.t("outputMuted")
-                                        if (modelData.properties.away) return root.t("awayStatus")
+                                        if (row.isTalking) return root.tr("Talking")
+                                        if (modelData.properties.inputMuted) return root.tr("Microphone muted")
+                                        if (modelData.properties.outputMuted) return root.tr("Muted (can't hear)")
+                                        if (modelData.properties.away) return root.tr("Away")
                                         return ""
                                     }
-                                    color: row.isTalking ? "#4CAF50" : (modelData.properties.inputMuted ? Theme.error : Theme.surfaceVariantText)
+                                    color: row.isTalking ? Theme.success : (modelData.properties.inputMuted ? Theme.error : Theme.surfaceVariantText)
                                     font.pixelSize: Theme.fontSizeSmall
                                     visible: text !== ""
                                 }
@@ -668,8 +644,8 @@ PluginComponent {
                 Column {
                     anchors.centerIn: parent
                     spacing: Theme.spacingS
-                    DankIcon { name: "group_off"; size: 36; color: Theme.surfaceVariantText; anchors.horizontalCenter: parent.horizontalCenter }
-                    StyledText { text: root.t("notConnectedTitle"); color: Theme.surfaceVariantText; anchors.horizontalCenter: parent.horizontalCenter }
+                    DankIcon { name: "group_off"; size: Theme.iconSizeLarge + Theme.spacingXS; color: Theme.surfaceVariantText; anchors.horizontalCenter: parent.horizontalCenter }
+                    StyledText { text: root.tr("Not connected"); color: Theme.surfaceVariantText; anchors.horizontalCenter: parent.horizontalCenter }
                 }
             }
         }
