@@ -50,6 +50,61 @@ PluginComponent {
     property bool showChannelCount: pluginData.showChannelCount === true
     readonly property bool debugEnabled: pluginData.debugEnabled === true || pluginData.debugLog === true
 
+    // Members hidden from the bar pills. Stored as an array of stable client
+    // keys ("db:<databaseId>" when available, otherwise "id:<clientId>") so the
+    // choice survives nick/avatar changes. The member list in the popout still
+    // shows them; only the pill avatars are filtered.
+    readonly property var hiddenPillIds: {
+        var raw = pluginData.hiddenPillIds !== undefined ? pluginData.hiddenPillIds : []
+        if (Array.isArray(raw))
+            return raw.map(function (v) { return String(v) })
+        if (typeof raw !== "string" || raw.trim() === "")
+            return []
+        try {
+            var parsed = JSON.parse(raw)
+            if (Array.isArray(parsed))
+                return parsed.map(function (v) { return String(v) })
+        } catch (e) {}
+        return raw.split(",").map(function (v) { return v.trim() }).filter(function (v) { return v !== "" })
+    }
+
+    function _clientKey(client) {
+        if (!client) return ""
+        var p = client.properties || {}
+        if (p.databaseId !== undefined && p.databaseId !== null && p.databaseId !== "")
+            return "db:" + String(p.databaseId)
+        return client.id !== undefined && client.id >= 0 ? "id:" + String(client.id) : ""
+    }
+
+    function isPillHidden(client) {
+        var key = root._clientKey(client)
+        return key !== "" && root.hiddenPillIds.indexOf(key) >= 0
+    }
+
+    function togglePillHidden(client, show) {
+        var key = root._clientKey(client)
+        if (key === "") return
+        var next = root.hiddenPillIds.filter(function (v) { return v !== key })
+        if (!show)
+            next.push(key)
+        try {
+            pluginData.hiddenPillIds = next
+        } catch (e) {
+            console.warn("[TS6] 无法保存胶囊头像显示设置: " + e)
+        }
+    }
+
+    // Channel members shown on the pills, in the same order as the member list.
+    readonly property var pillClients: {
+        var list = root.ts6Service.notifyTick >= 0 ? root.ts6Service.channelClients : []
+        var out = []
+        for (var i = 0; i < list.length; i++) {
+            if (!root.isPillHidden(list[i]))
+                out.push(list[i])
+        }
+        return out
+    }
+
     // Slightly larger avatar shown on the capsules, plus a speaking ring.
     readonly property real pillAvatarSize: 30
 
@@ -164,7 +219,7 @@ PluginComponent {
             clip: true
             visible: root.showWhenConnected
             implicitWidth: root.showWhenConnected ? root.pillAvatarSize : 0
-            implicitHeight: root.ts6Service.notifyTick >= 0 && root.ts6Service.channelClients && root.ts6Service.channelClients.length > 0 ? root.pillAvatarSize * root.ts6Service.channelClients.length + Theme.spacingXS * Math.max(0, root.ts6Service.channelClients.length - 1) : 0
+            implicitHeight: root.ts6Service.notifyTick >= 0 && root.pillClients.length > 0 ? root.pillAvatarSize * root.pillClients.length + Theme.spacingXS * Math.max(0, root.pillClients.length - 1) : 0
 
             MouseArea {
                 anchors.fill: parent
@@ -183,7 +238,7 @@ PluginComponent {
                 spacing: Theme.spacingXS
                 anchors.horizontalCenter: parent.horizontalCenter
                 Repeater {
-                    model: root.ts6Service.notifyTick >= 0 ? root.ts6Service.channelClients : []
+                    model: root.ts6Service.notifyTick >= 0 ? root.pillClients : []
                     delegate: Item {
                         width: root.pillAvatarSize
                         height: root.pillAvatarSize
@@ -245,7 +300,7 @@ PluginComponent {
             id: hPill
             clip: true
             visible: root.showWhenConnected
-            implicitWidth: root.showWhenConnected ? (root.ts6Service.channelClients && root.ts6Service.channelClients.length > 0 ? root.pillAvatarSize * root.ts6Service.channelClients.length + Theme.spacingXS * root.ts6Service.channelClients.length : 0) + root.pillControlsWidth + 0 : 0
+            implicitWidth: root.showWhenConnected ? (root.pillClients.length > 0 ? root.pillAvatarSize * root.pillClients.length + Theme.spacingXS * root.pillClients.length : 0) + root.pillControlsWidth + 0 : 0
             implicitHeight: root.pillAvatarSize
 
             MouseArea {
@@ -293,7 +348,7 @@ PluginComponent {
                     spacing: Theme.spacingXS
                     anchors.verticalCenter: parent.verticalCenter
                     Repeater {
-                        model: root.ts6Service.notifyTick >= 0 ? root.ts6Service.channelClients : []
+                        model: root.ts6Service.notifyTick >= 0 ? root.pillClients : []
                     delegate: Item {
                         width: root.pillAvatarSize
                         height: root.pillAvatarSize
@@ -518,7 +573,7 @@ PluginComponent {
                             }
 
                             Row {
-                                width: parent.width - 34 - 150 - Theme.spacingS * 3
+                                width: parent.width - 34 - 32 - (root.showVolume ? 150 : 0) - Theme.spacingS * (root.showVolume ? 4 : 3)
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 8
 
@@ -542,6 +597,35 @@ PluginComponent {
                                     font.pixelSize: Theme.fontSizeSmall
                                     visible: text !== ""
                                 }
+                            }
+
+                            // 胶囊显示开关：关闭后此人不出现在栏上胶囊，成员列表照常显示
+                            Rectangle {
+                                id: pillToggle
+                                width: 32
+                                height: 32
+                                radius: 16
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: pillToggleArea.containsMouse ? Theme.surfaceContainerHighest : "transparent"
+                                readonly property bool shown: !root.isPillHidden(modelData)
+
+                                DankIcon {
+                                    anchors.centerIn: parent
+                                    name: pillToggle.shown ? "visibility" : "visibility_off"
+                                    size: Theme.iconSizeSmall
+                                    color: pillToggle.shown ? Theme.primary : Theme.surfaceVariantText
+                                }
+                                MouseArea {
+                                    id: pillToggleArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.togglePillHidden(modelData, !pillToggle.shown)
+                                }
+                                ToolTip.visible: pillToggleArea.containsMouse
+                                ToolTip.text: pillToggle.shown
+                                    ? root.tr("Hide avatar on pill")
+                                    : root.tr("Show avatar on pill")
                             }
 
                             // Right side:
