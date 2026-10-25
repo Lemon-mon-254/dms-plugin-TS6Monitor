@@ -50,11 +50,17 @@ PluginComponent {
     property bool showChannelCount: pluginData.showChannelCount === true
     readonly property bool debugEnabled: pluginData.debugEnabled === true || pluginData.debugLog === true
 
+    // Mirror of pluginData.hiddenPillIds after a click, so the UI updates even
+    // before PluginService notifies this component about the saved setting.
+    property var _hiddenPillIdsOverride: null
+
     // Members hidden from the bar pills. Stored as an array of stable client
     // keys ("db:<databaseId>" when available, otherwise "id:<clientId>") so the
     // choice survives nick/avatar changes. The member list in the popout still
     // shows them; only the pill avatars are filtered.
     readonly property var hiddenPillIds: {
+        if (root._hiddenPillIdsOverride !== null)
+            return root._hiddenPillIdsOverride
         var raw = pluginData.hiddenPillIds !== undefined ? pluginData.hiddenPillIds : []
         if (Array.isArray(raw))
             return raw.map(function (v) { return String(v) })
@@ -87,10 +93,44 @@ PluginComponent {
         var next = root.hiddenPillIds.filter(function (v) { return v !== key })
         if (!show)
             next.push(key)
+        root._hiddenPillIdsOverride = next
+        // pluginData is only a read-only copy of the settings; write the new
+        // list through PluginService so it is persisted to plugin_settings.json.
+        if (!root.pluginService
+                || typeof root.pluginService.savePluginData !== "function") {
+            console.warn("[TS6] PluginService 不可用，胶囊头像设置无法保存")
+            return
+        }
         try {
-            pluginData.hiddenPillIds = next
+            root.pluginService.savePluginData(root.pluginId, "hiddenPillIds", next)
         } catch (e) {
             console.warn("[TS6] 无法保存胶囊头像显示设置: " + e)
+        }
+    }
+
+    // Called by PluginService after the setting is written. Clear the local
+    // mirror only when it matches what was persisted, so the pill does not
+    // flicker back to the old value between save and notification.
+    Connections {
+        target: root.pluginService
+        enabled: root.pluginService !== null
+        function onPluginDataChanged(changedPluginId) {
+            if (changedPluginId !== root.pluginId)
+                return
+            if (root._hiddenPillIdsOverride === null)
+                return
+            var saved = root.pluginData.hiddenPillIds
+            if (typeof saved === "string") {
+                try { saved = JSON.parse(saved) } catch (e) { saved = [] }
+            }
+            if (!Array.isArray(saved))
+                return
+            var current = root._hiddenPillIdsOverride
+            var same = saved.length === current.length
+            for (var i = 0; same && i < saved.length; i++)
+                same = String(saved[i]) === String(current[i])
+            if (same)
+                root._hiddenPillIdsOverride = null
         }
     }
 
